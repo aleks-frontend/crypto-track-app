@@ -20,7 +20,8 @@ class CurrencyRow extends Component {
         super(props);
         this.state = {
             userCoinAmount: '',
-            userCoinValue: ''
+            userCoinValue: '',
+            invalidCoinAmount: false
         };
         this.handleAmountChange = this.handleAmountChange.bind(this);
         this.handleAmountSubmit = this.handleAmountSubmit.bind(this);
@@ -43,7 +44,7 @@ class CurrencyRow extends Component {
     componentDidUpdate() {
         // After each state update, we check if the userCoinAmount was updated 
         // and if so we store the new value to localStorage
-        if (this.state.userCoinAmount !== '') {
+        if (Number(this.state.userCoinAmount) >= 0) {
             localStorage.setItem(this.props.currency.symbol, this.state.userCoinAmount);
         }
     }
@@ -59,15 +60,25 @@ class CurrencyRow extends Component {
     }
 
     handleAmountSubmit(e) {
+        e.preventDefault();
+        const regExp = /^[\d]*$/;
+        const isValidInputValue = regExp.test(this.state.userCoinAmount);
+
+        if (!isValidInputValue) {
+            this.setState({
+                invalidCoinAmount: true
+            })
+            return;
+        }
+
         this.setState({
-            userCoinValue: Number(this.getUserCoinValue(this.state.userCoinAmount)) || ''
+            userCoinValue: Number(this.getUserCoinValue(this.state.userCoinAmount)) || '',
+            invalidCoinAmount: false
         });
 
         if (Number(this.state.userCoinAmount) === 0) {
             this.setState({ userCoinAmount: '' });
         }
-
-        e.preventDefault();
     }
 
     render() {
@@ -77,8 +88,8 @@ class CurrencyRow extends Component {
 
         return (
             <tr>
-                <CurrencyRowCell 
-                    pointerCursor={true} 
+                <CurrencyRowCell
+                    pointerCursor={true}
                     bold={true}
                     onClick={() => this.props.navigateToDetails(this.props.currency.id)}>
                     {name}
@@ -93,6 +104,7 @@ class CurrencyRow extends Component {
                     <AmountUpdateForm
                         handleFormSubmit={this.handleAmountSubmit}
                         inputValue={this.state.userCoinAmount}
+                        invalidCoinAmount={this.state.invalidCoinAmount}
                         handleInputChange={this.handleAmountChange} />
                 </CurrencyRowCell>
                 <CurrencyRowCell>$ {this.state.userCoinValue}</CurrencyRowCell>
