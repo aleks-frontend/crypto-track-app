@@ -65,9 +65,9 @@ class Details extends React.Component {
 
     componentDidMount() {
         this.fetchData();
-        // this.fetchInterval = setInterval(() => {
-        //     this.fetchData();
-        // }, 60000)
+        this.fetchInterval = setInterval(() => {
+            this.fetchData();
+        }, 60000)
     }
 
     componentWillUnmount() {
