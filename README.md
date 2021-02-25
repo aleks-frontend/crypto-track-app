@@ -1,1 +1,1 @@
-# crypto-track-app
+# Crypto Track App
