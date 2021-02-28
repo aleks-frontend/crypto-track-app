@@ -1,4 +1,4 @@
-import React, { Component } from 'react';
+import React from 'react';
 import styled from 'styled-components';
 
 import CurrencyRow from './CurrencyRow';
@@ -24,82 +24,79 @@ const CurrencyTableHead = styled.th`
     text-align: center;
 `
 
-class CurrencyTable extends Component {
-    constructor(props) {
-        super(props);
-        this.state = {
-            currencies: [],
-            loaded: false
-        }
+const CurrencyTable = (props) => {
+    const isMountedRef = React.useRef(false);
+    const [currencies, setCurrencies] = React.useState([]);
+    const [loaded, setLoaded] = React.useState(false);
 
-        this.navigateToDetails = this.navigateToDetails.bind(this);
-        this.fetchData = this.fetchData.bind(this);
-        this.fetchInterval = null;
-    }
-
-    fetchData() {
+    // Helper function for fetching the data
+    const fetchData = () => {
         const limit = 50;
         const endpointURL = `${baseEndpointURL}/listings/latest?limit=${limit}&CMC_PRO_API_KEY=${apiKey}`;
 
         fetch(endpointURL)
             .then(response => response.json())
             .then(result => {
-                const currencies = result.data;
+                // Preventing the state setting if the component got unmounted in the meanwhile
+                if (isMountedRef.current) {
+                    const fetchedCurrencies = result.data;
 
-                this.setState({
-                    currencies,
-                    loaded: true
-                });
+                    setCurrencies(fetchedCurrencies);
+                    setLoaded(true);
+                }
             })
             .catch(err => {
                 console.error(err);
             });
     }
 
-    componentDidMount() {
-        this.fetchData();
-        this.fetchInterval = setInterval(() => {
-            this.fetchData();
+    // Component did mount
+    React.useEffect(() => {
+        isMountedRef.current = true;
+
+        fetchData();
+        let fetchInterval = setInterval(() => {
+            fetchData();
         }, 60000);
-    }
 
-    componentWillUnmount() {
-        clearInterval(this.fetchData);
-    }
+        return () => {
+            isMountedRef.current = false;
+            clearInterval(fetchInterval);
+        }
+    }, []);
 
-    navigateToDetails(id) {
-        this.props.history.push(`/currency/${id}`);
-    }
+    // Helper function for routing to Details page/component
+    const navigateToDetails = (id) => {
+        props.history.push(`/currency/${id}`);
+    };
 
-    render() {
-        return (
-            <>
-                <CurrencyTableWrapper>
-                    {this.state.loaded ?
-                        <CurrencyTableMain>
-                            <thead>
-                                <tr>
-                                    <CurrencyTableHead>Name</CurrencyTableHead>
-                                    <CurrencyTableHead>Short Name</CurrencyTableHead>
-                                    <CurrencyTableHead>$ Value</CurrencyTableHead>
-                                    <CurrencyTableHead>Last 24h</CurrencyTableHead>
-                                    <CurrencyTableHead>Amount you own</CurrencyTableHead>
-                                    <CurrencyTableHead>$ value of your coin</CurrencyTableHead>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {this.state.currencies.map(currency => <CurrencyRow
-                                    currency={currency}
-                                    key={currency.id}
-                                    navigateToDetails={this.navigateToDetails} />)}
-                            </tbody>
-                        </CurrencyTableMain>
-                        : <LoadingSpinner />
-                    }
-                </CurrencyTableWrapper>
-            </>
-        );
-    }
+    return (
+        <>
+            <CurrencyTableWrapper>
+                {loaded ?
+                    <CurrencyTableMain>
+                        <thead>
+                            <tr>
+                                <CurrencyTableHead>Name</CurrencyTableHead>
+                                <CurrencyTableHead>Short Name</CurrencyTableHead>
+                                <CurrencyTableHead>$ Value</CurrencyTableHead>
+                                <CurrencyTableHead>Last 24h</CurrencyTableHead>
+                                <CurrencyTableHead>Amount you own</CurrencyTableHead>
+                                <CurrencyTableHead>$ value of your coin</CurrencyTableHead>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {currencies.map(currency => <CurrencyRow
+                                currency={currency}
+                                key={currency.id}
+                                navigateToDetails={navigateToDetails} />)}
+                        </tbody>
+                    </CurrencyTableMain>
+                    : <LoadingSpinner />
+                }
+            </CurrencyTableWrapper>
+        </>
+    );
 }
 
 export default CurrencyTable;
