@@ -1,4 +1,4 @@
-import React, { Component } from 'react';
+import React from 'react';
 import styled from 'styled-components';
 
 import AmountUpdateForm from './AmountUpdateForm';
@@ -15,102 +15,107 @@ const CurrencyRowCell = styled.td`
     border: 1px solid #fff;
 `;
 
-class CurrencyRow extends Component {
-    constructor(props) {
-        super(props);
-        this.state = {
-            userCoinAmount: '',
-            userCoinValue: '',
-            invalidCoinAmount: false
-        };
-        this.handleAmountChange = this.handleAmountChange.bind(this);
-        this.handleAmountSubmit = this.handleAmountSubmit.bind(this);
-        this.getUserCoinValue = this.getUserCoinValue.bind(this);
-    }
+const CurrencyRow = (props) => {
+    const [userCoinData, setUserCoinData] = React.useState({
+        amount: '',
+        value: ''
+    });
 
-    componentDidMount() {
-        const localStorageRef = Number(localStorage.getItem(this.props.currency.symbol));
+    const [invalidCoinAmount, setInvalidCoinAmount] = React.useState(false);
+
+    // Component did mount
+    React.useEffect(() => {
+        const localStorageRef = Number(localStorage.getItem(props.currency.symbol));
 
         if (localStorageRef !== 0) {
-            this.setState({
-                userCoinAmount: localStorageRef,
-                userCoinValue: this.getUserCoinValue(localStorageRef)
+            setUserCoinData({
+                amount: localStorageRef,
+                value: getUserCoinValue(localStorageRef)
             });
         } else if (localStorageRef === 0) {
-            localStorage.removeItem(this.props.currency.symbol);
+            localStorage.removeItem(props.currency.symbol);
         }
-    }
+    }, []);
 
-    componentDidUpdate() {
+    // Component did update
+    React.useEffect(() => {
         // After each state update, we check if the userCoinAmount was updated 
         // and if so we store the new value to localStorage
-        if (Number(this.state.userCoinAmount) >= 0) {
-            localStorage.setItem(this.props.currency.symbol, this.state.userCoinAmount);
+        if (Number(userCoinData.amount) >= 0) {
+            localStorage.setItem(props.currency.symbol, userCoinData.amount);
         }
-    }
+    }, [userCoinData, props.currency.symbol]);
 
     // Helper method for getting the user's coin value
     // It will be a product of the current coin amount and the current coin price
-    getUserCoinValue(amount) {
-        return (amount * this.props.currency.quote.USD.price).toFixed(2);
-    }
+    const getUserCoinValue = (amount) => (amount * props.currency.quote.USD.price).toFixed(2);
 
-    handleAmountChange(e) {
-        this.setState({ userCoinAmount: e.target.value });
-    }
+    const handleAmountChange = e => {
+        setUserCoinData({
+            ...userCoinData,
+            amount: e.target.value
+        });
+    };
 
-    handleAmountSubmit(e) {
+    const handleAmountSubmit = (e) => {
         e.preventDefault();
         const regExp = /^[\d]*$/;
-        const isValidInputValue = regExp.test(this.state.userCoinAmount);
+        const isValidInputValue = regExp.test(userCoinData.amount);
 
+        // Checking if the amount input is a positive number
+        // Setting the invalid state to true, which will add an invalid styling to the form
         if (!isValidInputValue) {
-            this.setState({
-                invalidCoinAmount: true
-            })
+            setInvalidCoinAmount(true);
             return;
         }
 
-        this.setState({
-            userCoinValue: Number(this.getUserCoinValue(this.state.userCoinAmount)) || '',
-            invalidCoinAmount: false
-        });
+        setInvalidCoinAmount(false);
 
-        if (Number(this.state.userCoinAmount) === 0) {
-            this.setState({ userCoinAmount: '' });
+        // Reseting both amount and value if amount is set to zero
+        if (Number(userCoinData.amount) === 0) {
+            setUserCoinData({
+                value: '',
+                amount: ''
+            });
+        } else {
+            // Calculating the value of a coin if the value is not invalid or zero
+            setUserCoinData({
+                ...userCoinData,
+                value: Number(getUserCoinValue(userCoinData.amount)) || '',
+            });
+
         }
     }
 
-    render() {
-        const { currency } = this.props;
-        const { name, symbol } = currency;
-        const { price, percent_change_24h: percentChange24h } = currency.quote.USD;
+    // Using object destructuring to get all the currency values received via props
+    const { currency } = props;
+    const { name, symbol } = currency;
+    const { price, percent_change_24h: percentChange24h } = currency.quote.USD;
 
-        return (
-            <tr>
-                <CurrencyRowCell
-                    pointerCursor={true}
-                    bold={true}
-                    onClick={() => this.props.navigateToDetails(this.props.currency.id)}>
-                    {name}
+    return (
+        <tr>
+            <CurrencyRowCell
+                pointerCursor={true}
+                bold={true}
+                onClick={() => props.navigateToDetails(props.currency.id)}>
+                {name}
+            </CurrencyRowCell>
+            <CurrencyRowCell>{symbol}</CurrencyRowCell>
+            <CurrencyRowCell>$ {price.toFixed(2)}</CurrencyRowCell>
+            <CurrencyRowCell
+                colorType={percentChange24h.toFixed(2) > 0 ? 'primary' : 'secondary'}>
+                {percentChange24h.toFixed(2)} %
                 </CurrencyRowCell>
-                <CurrencyRowCell>{symbol}</CurrencyRowCell>
-                <CurrencyRowCell>$ {price.toFixed(2)}</CurrencyRowCell>
-                <CurrencyRowCell
-                    colorType={percentChange24h.toFixed(2) > 0 ? 'primary' : 'secondary'}>
-                    {percentChange24h.toFixed(2)} %
-                </CurrencyRowCell>
-                <CurrencyRowCell>
-                    <AmountUpdateForm
-                        handleFormSubmit={this.handleAmountSubmit}
-                        inputValue={this.state.userCoinAmount}
-                        invalidCoinAmount={this.state.invalidCoinAmount}
-                        handleInputChange={this.handleAmountChange} />
-                </CurrencyRowCell>
-                <CurrencyRowCell>$ {this.state.userCoinValue}</CurrencyRowCell>
-            </tr>
-        );
-    }
-}
+            <CurrencyRowCell>
+                <AmountUpdateForm
+                    handleFormSubmit={handleAmountSubmit}
+                    inputValue={userCoinData.amount}
+                    invalidCoinAmount={invalidCoinAmount}
+                    handleInputChange={handleAmountChange} />
+            </CurrencyRowCell>
+            <CurrencyRowCell>$ {userCoinData.value}</CurrencyRowCell>
+        </tr>
+    );
+};
 
 export default CurrencyRow;
